@@ -634,6 +634,7 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "embedded-graphics"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -647,6 +648,8 @@ dependencies = [
 ]
 
 [[package]]
+=======
+>>>>>>> 766cfa4e (add mipidsi)
 name = "embedded-graphics-core"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1478,7 +1481,11 @@ checksum = "790ebd28bd67addbccf41b1c0c188c26bb9f5bdcd91d4d6da9bd558e20d97a1d"
 dependencies = [
  "embedded-graphics-core",
  "embedded-hal 1.0.0",
+<<<<<<< HEAD
  "heapless 0.8.0",
+=======
+ "heapless",
+>>>>>>> 766cfa4e (add mipidsi)
 ]
 
 [[package]]
