@@ -25,7 +25,7 @@ cargo_crate("esp_rom_sys") {
   ]
 
   if (board == "esp32c6_devkitc_1") {
-    deps += [ "//external/vendor/esp32c6-0.23.0:esp32c6" ]
+    deps += [ "//external/vendor/esp32c6-0.23.2:esp32c6" ]
     features = [ "esp32c6" ]
   } else {
     deps += [ "//external/vendor/esp32c3-0.32.2:esp32c3" ]
