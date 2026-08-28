@@ -1,0 +1,252 @@
+#![no_std]
+
+pub mod consts;
+pub mod dcs_types;
+pub mod display_bus;
+
+use core::marker::PhantomData;
+use display_driver::bus::DisplayBus;
+use display_driver::panel::{initseq::InitStep, reset::LCDResetOption, Orientation};
+use embedded_hal::digital::OutputPin;
+
+pub use crate::consts::*;
+pub use crate::dcs_types::*;
+
+static RGB_ADDRESS_MODE_PARAM: [u8; 1] = [0];
+static BGR_ADDRESS_MODE_PARAM: [u8; 1] = [AddressMode::BGR.bits()];
+
+/// A generic driver for MIPI DCS compliant displays.
+///
+/// This struct implements standard MIPI Display Command Set (MIPI DCS) operations such as setting address windows,
+/// controlling sleep modes, and handling pixel formats.
+/// It is designed to be embedded within specific panel drivers to handle the common DCS functionality.
+pub struct GenericMipidcs<B, S, RST>
+where
+    B: DisplayBus,
+    S: PanelSpec,
+    RST: OutputPin,
+{
+    pub reset_pin: LCDResetOption<RST>,
+    /// The current Address Mode (MADCTL) setting.
+    pub address_mode: AddressMode,
+    pub orientation: Orientation,
+    _phantom: PhantomData<(B, S)>,
+}
+
+impl<B, S, RST> GenericMipidcs<B, S, RST>
+where
+    B: DisplayBus,
+    S: PanelSpec,
+    RST: OutputPin,
+{
+    /// Creates a new generic MIPI DCS driver.
+    pub fn new(reset_pin: LCDResetOption<RST>) -> Self {
+        Self {
+            reset_pin,
+            address_mode: AddressMode::empty(),
+            orientation: Orientation::Deg0,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Returns the column (X) and page (Y) offsets based on the current orientation
+    /// and the `INVERT_TRANSPOSED_OFFSET` setting.
+    pub fn get_offset(&self) -> (u16, u16) {
+        match (self.orientation, S::INVERT_TRANSPOSED_OFFSET) {
+            (Orientation::Deg0, _) => (S::PHYSICAL_X_OFFSET, S::PHYSICAL_Y_OFFSET),
+            (Orientation::Deg180, _) => {
+                (S::PHYSICAL_X_OFFSET_ROTATED, S::PHYSICAL_Y_OFFSET_ROTATED)
+            }
+            (Orientation::Deg90, false) | (Orientation::Deg270, true) => {
+                (S::PHYSICAL_Y_OFFSET, S::PHYSICAL_X_OFFSET)
+            }
+            (Orientation::Deg270, false) | (Orientation::Deg90, true) => {
+                (S::PHYSICAL_Y_OFFSET_ROTATED, S::PHYSICAL_X_OFFSET_ROTATED)
+            }
+        }
+    }
+
+    /// Software reset on the display controller (Command 0x01).
+    pub async fn soft_reset(&self, bus: &mut B) -> Result<(), B::Error> {
+        bus.write_cmd(&[SOFT_RESET]).await
+    }
+
+    /// Enter Sleep Mode (Command 0x10).
+    pub async fn enter_sleep_mode(&self, bus: &mut B) -> Result<(), B::Error> {
+        bus.write_cmd(&[ENTER_SLEEP_MODE]).await
+    }
+
+    /// Exit Sleep Mode (Command 0x11).
+    pub async fn exit_sleep_mode(&self, bus: &mut B) -> Result<(), B::Error> {
+        bus.write_cmd(&[EXIT_SLEEP_MODE]).await
+    }
+
+    /// Turn the display panel OFF (Command 0x28).
+    pub async fn set_display_off(&self, bus: &mut B) -> Result<(), B::Error> {
+        bus.write_cmd(&[SET_DISPLAY_OFF]).await
+    }
+
+    /// Turn the display panel ON (Command 0x29).
+    pub async fn set_display_on(&self, bus: &mut B) -> Result<(), B::Error> {
+        bus.write_cmd(&[SET_DISPLAY_ON]).await
+    }
+
+    /// Set the column address window (Command 0x2A).
+    pub async fn set_column_address(
+        &self,
+        bus: &mut B,
+        start: u16,
+        end: u16,
+    ) -> Result<(), B::Error> {
+        let params = AddressRange::new_with_offset(start, end, S::PHYSICAL_X_OFFSET);
+        bus.write_cmd_with_params(&[SET_COLUMN_ADDRESS], params.as_bytes())
+            .await
+    }
+
+    /// Set the page (row) address window (Command 0x2B).
+    pub async fn set_page_address(
+        &self,
+        bus: &mut B,
+        start: u16,
+        end: u16,
+    ) -> Result<(), B::Error> {
+        let params = AddressRange::new_with_offset(start, end, S::PHYSICAL_Y_OFFSET);
+        bus.write_cmd_with_params(&[SET_PAGE_ADDRESS], params.as_bytes())
+            .await
+    }
+
+    pub async fn set_address_window(
+        &self,
+        bus: &mut B,
+        x0: u16,
+        y0: u16,
+        x1: u16,
+        y1: u16,
+    ) -> Result<(), B::Error> {
+        let (x_offset, y_offset) = self.get_offset();
+
+        bus.write_cmd_with_params(
+            &[SET_COLUMN_ADDRESS],
+            AddressRange::new_with_offset(x0, x1, x_offset).as_bytes(),
+        )
+        .await?;
+
+        bus.write_cmd_with_params(
+            &[SET_PAGE_ADDRESS],
+            AddressRange::new_with_offset(y0, y1, y_offset).as_bytes(),
+        )
+        .await
+    }
+
+    /// Set the Address Mode (Memory Data Access Control, aka. MADCTL - Command 0x36).
+    ///
+    /// # Arguments
+    ///
+    /// * `bus` - The display bus to write to.
+    /// * `mode` - The new address mode to set.
+    /// * `orientation_if_changed` - Set the orientation in state machine if it has changed
+    /// by your self for correct offset handling.
+    ///
+    /// # Note
+    ///
+    /// This function will not change `mode` and send it.
+    pub async fn set_address_mode(
+        &mut self,
+        bus: &mut B,
+        mode: AddressMode,
+        orientation_if_changed: Option<Orientation>,
+    ) -> Result<(), B::Error> {
+        self.address_mode = mode;
+        if let Some(orientation) = orientation_if_changed {
+            self.orientation = orientation;
+        }
+        bus.write_cmd_with_params(&[SET_ADDRESS_MODE], &[mode.bits()])
+            .await
+    }
+
+    /// Set the BGR/RGB order in Address Mode (MADCTL).
+    pub async fn set_bgr_order(&mut self, bus: &mut B, bgr: bool) -> Result<(), B::Error> {
+        self.address_mode.set(AddressMode::BGR, bgr);
+        bus.write_cmd_with_params(&[SET_ADDRESS_MODE], &[self.address_mode.bits()])
+            .await
+    }
+
+    /// Set the Pixel Format (Command 0x3A).
+    pub async fn set_pixel_format(&self, bus: &mut B, mode: PixelFormat) -> Result<(), B::Error> {
+        bus.write_cmd_with_params(&[SET_PIXEL_FORMAT], &[mode.0])
+            .await
+    }
+
+    /// Set Inversion Mode (Command 0x20 / 0x21).
+    ///
+    /// `true` enters Invert Mode (0x21), `false` exits Invert Mode (0x20).
+    pub async fn set_invert_mode(&self, bus: &mut B, inverted: bool) -> Result<(), B::Error> {
+        match inverted {
+            true => bus.write_cmd(&[ENTER_INVERT_MODE]).await,
+            false => bus.write_cmd(&[EXIT_INVERT_MODE]).await,
+        }
+    }
+
+    const INIT_STEPS: [InitStep<'static>; 6] = [
+        InitStep::SingleCommand(EXIT_SLEEP_MODE),
+        InitStep::DelayMs(120),
+        InitStep::select_cmd(S::INVERTED, ENTER_INVERT_MODE, EXIT_INVERT_MODE),
+        InitStep::CommandWithParams(
+            SET_ADDRESS_MODE,
+            if S::BGR {
+                &BGR_ADDRESS_MODE_PARAM
+            } else {
+                &RGB_ADDRESS_MODE_PARAM
+            },
+        ),
+        // Power On
+        InitStep::SingleCommand(SET_DISPLAY_ON),
+        InitStep::DelayMs(20),
+    ];
+}
+
+/// Display Specification Trait.
+pub trait PanelSpec {
+    /// Screen width in pixels.
+    const PHYSICAL_WIDTH: u16;
+    /// Screen height in pixels.
+    const PHYSICAL_HEIGHT: u16;
+    /// Column(X) offset in pixels (default 0).
+    const PHYSICAL_X_OFFSET: u16 = 0;
+    /// Row(Y) offset in pixels (default 0).
+    const PHYSICAL_Y_OFFSET: u16 = 0;
+
+    /// Column(X) offset in pixels when the screen is rotated 180° or 270°.
+    /// Used for panels that are not physically centered within the frame.
+    /// If undefined, defaults to PHYSICAL_X_OFFSET.
+    const PHYSICAL_X_OFFSET_ROTATED: u16 = Self::PHYSICAL_X_OFFSET;
+
+    /// Row(Y) offset in pixels when the screen is rotated 180° or 270°.
+    /// Used for panels that are not physically centered within the frame.
+    /// If undefined, defaults to PHYSICAL_Y_OFFSET.
+    const PHYSICAL_Y_OFFSET_ROTATED: u16 = Self::PHYSICAL_Y_OFFSET;
+
+    /// Whether the offset is inverted when the screen is rotated 90° or 270°.
+    ///
+    /// Used for panels that are not physically centered within the frame
+    /// (PHYSICAL_*_OFFSET_ROTATED != PHYSICAL_*_OFFSET)
+    ///
+    /// Example: offset = (2, 1), offset_rotated = (2, 3)
+    /// INVERT_TRANSPOSED_OFFSET |  false |  true  |
+    /// Deg0                     | (2, 1) | (2, 1) |
+    /// Deg90(MV, MX)            | (1, 2) | (3, 2) |
+    /// Deg180(MX, MY)           | (2, 3) | (2, 3) |
+    /// Deg270(MV, MY)           | (3, 2) | (1, 2) |
+    ///
+    /// This issue likely relates to how the driver IC’s internal RAM is organized
+    /// or written to.
+    /// It is also possible that `true` actually represents the non-inverted state,
+    /// but in practice `false` appears to be the more common case.
+    const INVERT_TRANSPOSED_OFFSET: bool = false;
+
+    /// Whether the display is inverted (default false).
+    const INVERTED: bool = false;
+
+    /// Whether the display is BGR (default false).
+    const BGR: bool = false;
+}

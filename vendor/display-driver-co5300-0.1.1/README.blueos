@@ -1,0 +1,10 @@
+Name: display-driver-co5300
+URL: https://crates.io/crates/display-driver-co5300
+Version: 0.1.1
+Revision: 125896d66c7c838e2662a95a1f35bd72366b26ca
+License: Apache-2.0
+License File: //external/vendor/display-driver-co5300-0.1.1/README.md
+Shipped: yes
+Security Critical: yes
+
+Description: Display Driver for CO5300

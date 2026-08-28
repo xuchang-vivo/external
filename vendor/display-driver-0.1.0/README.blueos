@@ -1,0 +1,10 @@
+Name: display-driver
+URL: https://crates.io/crates/display-driver
+Version: 0.1.0
+Revision: 125896d66c7c838e2662a95a1f35bd72366b26ca
+License: Apache-2.0
+License File: //external/vendor/display-driver-0.1.0/README.md
+Shipped: yes
+Security Critical: yes
+
+Description: Async display driver for embedded systems, supporting various display panels and buses.

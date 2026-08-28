@@ -1,0 +1,10 @@
+Name: delegate
+URL: https://crates.io/crates/delegate
+Version: 0.13.5
+Revision: b129d4cbf4cc499eff7743365dcb0fe5d8d2e820
+License: Apache-2.0
+License File: //external/vendor/delegate-0.13.5/LICENSE-APACHE,//external/vendor/delegate-0.13.5/LICENSE-MIT
+Shipped: yes
+Security Critical: yes
+
+Description: Method delegation with less boilerplate

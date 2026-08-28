@@ -1,0 +1,10 @@
+Name: display-interface
+URL: https://crates.io/crates/display-interface
+Version: 0.5.0
+Revision: b7eb1d0fe4bd995f3dc8d3f5bdccdba4216cc63f
+License: Apache-2.0
+License File: //external/vendor/display-interface-0.5.0/LICENSE-APACHE
+Shipped: yes
+Security Critical: yes
+
+Description: Traits for interfaces used to drive displays

@@ -52,7 +52,7 @@ cargo_crate("esp_hal") {
     "//external/vendor/esp-metadata-generated-0.4.0:esp_metadata_generated",
   ]
   proc_macro_deps = [
-    "//external/vendor/delegate-0.13.4:delegate",
+    "//external/vendor/delegate-0.13.5:delegate",
     "//external/vendor/document-features-0.2.12:document_features",
     "//external/vendor/esp-hal-procmacros-0.22.0:esp_hal_procmacros",
     "//external/vendor/instability-0.3.12:instability",
