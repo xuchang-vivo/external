@@ -188,13 +188,25 @@ criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 [policy."defmt:1.0.1"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
-[policy."delegate:0.13.4"]
+[policy."delegate:0.13.5"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
 [policy."der:0.7.10"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
 [policy."digest:0.10.7"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
+[policy."display-driver-co5300:0.1.1"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
+[policy."display-driver-mipidcs:0.1.1"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
+[policy."display-driver:0.1.0"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
+[policy."display-interface:0.5.0"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
 [policy."docsplay-macros:0.1.2"]
@@ -302,7 +314,13 @@ criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 [policy."esp-wifi-sys-esp32c3:0.2.0"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
+[policy."esp-wifi-sys-esp32c6:0.2.0"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
 [policy."esp32c3:0.32.2"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
+[policy."esp32c6:0.23.2"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
 [policy."fastrand:2.3.0"]

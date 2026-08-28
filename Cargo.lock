@@ -170,6 +170,8 @@ dependencies = [
  "defmt-rtt",
  "defmt-test",
  "delegate",
+ "display-driver",
+ "display-driver-co5300",
  "embedded-graphics",
  "embedded-hal 1.0.0",
  "embedded-hal-bus",
@@ -505,9 +507,9 @@ dependencies = [
 
 [[package]]
 name = "delegate"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6178a82cf56c836a3ba61a7935cdb1c49bfaa6fa4327cd5bf554a503087de26b"
+checksum = "780eb241654bf097afb00fc5f054a09b687dad862e485fdcf8399bb056565370"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -534,6 +536,49 @@ dependencies = [
  "crypto-common",
  "subtle",
 ]
+
+[[package]]
+name = "display-driver"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "543e45928e0344811c429556d103ba12549c809f18576feff38914029a93a67b"
+dependencies = [
+ "display-interface",
+ "embedded-graphics-core",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+]
+
+[[package]]
+name = "display-driver-co5300"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "856e5aea3157076fe9eb7fcc4467aab916e85b81e46e59e9518faac26c8848ef"
+dependencies = [
+ "delegate",
+ "display-driver",
+ "display-driver-mipidcs",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+]
+
+[[package]]
+name = "display-driver-mipidcs"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ebae28ed86a14809fb30855c0abb8bbdf6e1ea283bed86f06dfe550d24607a0"
+dependencies = [
+ "bitflags 2.10.0",
+ "display-driver",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+]
+
+[[package]]
+name = "display-interface"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ba2aab1ef3793e6f7804162debb5ac5edb93b3d650fbcc5aeb72fcd0e6c03a0"
 
 [[package]]
 name = "docsplay"

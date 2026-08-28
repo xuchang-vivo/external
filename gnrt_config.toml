@@ -243,3 +243,12 @@ license_files = ["LICENSE-MIT"]
 
 [crate.embedded-graphics-core]
 license_files = ["README.md"]
+
+[crate.display-driver-mipidcs]
+license_files = ["README.md"]
+
+[crate.display-driver-co5300]
+license_files = ["README.md"]
+
+[crate.display-driver]
+license_files = ["README.md"]
