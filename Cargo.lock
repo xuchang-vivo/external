@@ -167,6 +167,7 @@ dependencies = [
  "cfg-if",
  "const-default",
  "cortex-m",
+ "cst92xx",
  "defmt-rtt",
  "defmt-test",
  "delegate",
@@ -352,6 +353,15 @@ checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
 dependencies = [
  "generic-array 0.14.7",
  "typenum",
+]
+
+[[package]]
+name = "cst92xx"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "879ed2bad200332bf3d47c88e349076f02d136b2d8cd020c717469b9beae921a"
+dependencies = [
+ "embedded-hal 1.0.0",
 ]
 
 [[package]]

@@ -252,3 +252,6 @@ license_files = ["README.md"]
 
 [crate.display-driver]
 license_files = ["README.md"]
+
+[crate.cst92xx]
+license_files = ["README.md"]

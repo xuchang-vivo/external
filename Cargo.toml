@@ -159,3 +159,8 @@ default-features = false
 features = [
     "unwinder"
 ]
+
+[dependencies.cst92xx]
+version = "0.2.4"
+default-features = false
+features = ["blocking"]

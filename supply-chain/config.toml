@@ -146,6 +146,9 @@ criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 [policy."crypto-common:0.1.7"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 
+[policy."cst92xx:0.2.4"]
+criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
+
 [policy."ctr:0.9.2"]
 criteria = ["crypto-safe", "safe-to-deploy", "ub-risk-2"]
 

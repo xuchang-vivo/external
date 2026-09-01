@@ -1,0 +1,98 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.4] - 2026-08-19
+
+### Fixed
+
+- CI's `semver-checks` job failed on every push: `cargo-semver-checks-action` defaults to heuristically enabling every non-nightly feature it finds, which combines `async` and `blocking` — a combination `src/lib.rs` deliberately makes a `compile_error!`. Pinned it to `feature-group: default-features` so it checks the crate's actual default public surface instead.
+
+## [0.2.3] - 2026-08-13
+
+### Added
+
+- CI now builds `examples/waveshare-esp32s3-touch-amoled-1p75` against the Espressif Xtensa toolchain, and runs `cargo-semver-checks` against the last version published on crates.io.
+
+### Changed
+
+- Unified the async and blocking driver bodies (`init`, `get_attribute`, `set_mode`, `prepare_factory_mode`, `touches`) into a single `src/driver.rs`, generated for each feature via two small local macros. The two files were near-mirror copies of each other before, so a fix like the I2C error propagation one in 0.2.2 had to be applied by hand in both.
+- Replaced the hand-rolled I2C/delay mocks in `tests/async.rs`/`tests/blocking.rs` with `embedded-hal-mock`, a dev-dependency that was already declared but unused.
+- Renamed `examples/esp32s3-sample` to `examples/waveshare-esp32s3-touch-amoled-1p75` — the old name implied it works on any ESP32-S3 board, but its pin assignments are specific to the Waveshare 1.75" Touch AMOLED module (see [Wiring (ESP32-S3)](README.md#wiring-esp32-s3)).
+
+## [0.2.2] - 2026-08-12
+
+### Fixed
+
+- CI's `test` job failed for every `*,defmt` combination: `cargo test` links a real executable, and `defmt`'s macros need a `#[defmt::global_logger]` implementation to satisfy that link — something only meaningful on an embedded target with a real transport (e.g. `defmt-rtt`, as the ESP32-S3 example uses), not on the CI runner. Switched that step to `cargo build`, which only needs to typecheck the `defmt`-gated code, not link a runnable binary.
+- The 0.2.1 fix for the example's GPIO pins implied `TP_RESET → GPIO2` was a fact about the CST92xx family in general; it's actually specific to the Waveshare 1.75" (CST9217) board. Added `docs/ESP32-S3-Touch-AMOLED-2.16-Schematic.pdf` (the 2.16", CST9220 variant) and reworded the README/example docs to make clear pin assignments are per-board — that board wires `TP_RESET` to GPIO40 instead.
+- `set_mode()`'s handshake retry loop and `prepare_factory_mode()` discarded the actual I2C error on every failed attempt and always returned a generic `Error::NotReady` once retries were exhausted. Both now track the last I2C error and return it instead, so a genuinely broken bus is distinguishable from the chip just not confirming the handshake in time. Added tests (both drivers) covering the successful `RunMode::Factory` polling-retry path and this new error-propagation path — previously `prepare_factory_mode()` had no coverage at all.
+
+## [0.2.1] - 2026-08-12
+
+### Fixed
+
+- `reset()`'s post-reset settle delay was 30ms, a guess made before checking the CST9217 datasheet's power-on/reset section (10.5) for actual numbers. It documents `TRON` (chip reinitialization time after reset) as 100ms typical; bumped the delay to match. The 10ms low pulse already comfortably clears `TRST` (reset pulse width, 0.1ms typical), so that's unchanged.
+- The ESP32-S3 example wired `RST` to GPIO11 and `TOUCH_INT` to GPIO40 — an assumption made without hardware documentation to back it up. Added the board's schematic (`docs/ESP32-S3-Touch-AMOLED-1.75C-schematic.pdf`) and corrected them to GPIO2 and GPIO11 respectively, per the schematic's `TP_RESET`/`TP_INT` net names.
+
+### Added
+
+- Docs (crate README and the ESP32-S3 example's) now cite the board schematic and note that `TP_SCL`/`TP_SDA` (GPIO14/15) is shared with the onboard ES8311 codec and QMI8658C IMU, not a touch-dedicated bus.
+
+## [0.2.0] - 2026-08-11
+
+### Added
+
+- `ChipInfo`, holding the chip metadata `get_attribute()` discovers (chip type, panel resolution, project ID, firmware version, checksum), retrievable via `driver.chip_info()`.
+- `TouchConfig`, `Orientation`, and `DisplayMapping` for an optional coordinate transform (axis swap, mirroring, scaling to a target display resolution) applied to every `Point` returned by `touches()`. Set it with `driver.with_config(...)`.
+- Optional hardware reset pin support via `.with_reset(pin)` on both drivers, defaulting to a no-op `NoResetPin`.
+- `CHANGELOG.md` (this file).
+- `docs/CST9217.pdf`, the reference datasheet.
+- CI (`.github/workflows/ci.yml`): fmt, clippy, and tests for each backend feature, a docs build, an MSRV (1.85) build, and a check that `--all-features` still fails to compile (async/blocking must stay mutually exclusive).
+- `rust-version = "1.85"` in `Cargo.toml`, matching the floor `edition = "2024"` already required.
+- Tests covering `get_attribute()`'s error paths (`InvalidFirmware`, `InvalidCheckCode`, `InvalidChipType`) and `set_mode()`'s `NotReady` handshake timeout, for both drivers — previously only `touches()` had coverage.
+- The ESP32-S3 example now drives its `RST` pin via `.with_reset(...)` instead of relying on the no-op default, and logs the full `ChipInfo` (via its derived `defmt::Format`) plus the actual error value on failures, instead of a generic message.
+
+### Fixed
+
+- The crate failed to compile: `src/lib.rs` was missing `mod info;`/`mod reset_pin;` declarations, and both drivers referenced `TouchConfig` fields that had moved to `ChipInfo`.
+- `reset()` never actually toggled the reset pin on either driver — it only ran the settle delay. It now drives the pin low, waits, then releases it, matching SensorLib's `getAttribute()`, which resets the chip before every attribute read.
+- `touches()` never applied `TouchConfig::transform()` to the coordinates it returned, even though the transform was implemented and unit-tested.
+- `touches()` could return a second touch slot even when the first slot's event was invalid; SensorLib discards the whole report in that case, and this driver now matches that.
+- `cargo build --all-features` (and docs.rs's default build) failed: the `async` and `blocking` features both export a `CST92xx` type at the crate root, colliding when both are enabled. This now fails fast with a clear `compile_error!` instead of a confusing re-export error, and docs.rs is pinned to the default feature set.
+- `cargo test` with the default (`async`) feature also tried to compile `tests/blocking.rs`, and vice versa. Both are now declared as `[[test]]` targets gated by `required-features`.
+- Two test files (`tests/info.rs`, `tests/types.rs`) were integration tests written as if they were inline unit tests (`use super::*`, which doesn't resolve there); moved inline into `src/info.rs` and `src/types.rs`.
+- `REG_CHIP_INFO` duplicated the value of `REG_DEBUG_MODE` and was unused; removed in favor of named constants (`REG_CHIP_TYPE`, `REG_FW_VERSION`, and others) for the registers `get_attribute()`/`set_mode()` actually read and write.
+- A false-positive `clippy::large_stack_frames` on the ESP32-S3 example's `touch_task`, caused by the lint counting the whole async state machine (stored in `embassy_executor`'s static task pool) as call-stack usage. Confirmed via `objdump` on the built firmware that the real frame is 192 bytes, and scoped an `#[allow]` to that function instead of raising the crate-wide threshold.
+- Assorted stray Spanish-language comments and docstrings translated to English for consistency with the rest of the crate.
+- The ESP32-S3 example's README described a `maintenance_task` and an `examples/esp32s3-touch` demo that don't exist in this codebase, and told readers to run `cargo build -p esp32s3-sample` from a workspace root that doesn't exist either.
+
+### Changed
+
+- **Breaking:** the async driver's `CST92xx::new()` now takes a `delay: DELAY` parameter (`CST92xx::new(i2c, delay)`, matching the blocking driver) where `DELAY: embedded_hal_async::delay::DelayNs`. `embassy-time` is no longer a dependency of this crate at all — bring your own async delay impl (e.g. `embassy_time::Delay` if you already depend on it). This also fixed a real gap: the crate depended on `embassy-time` without ever wiring up a concrete time driver, which meant any consumer's test suite (including this crate's own) would fail to link the moment it exercised a code path that waits on a timer.
+- `CST92xx`'s async and blocking backends are now gated behind `async` (default) and `blocking` Cargo features, replacing the previous split of always compiling both under different type names (`CST92xx` vs. `BlockingCST92xx`).
+- Magic register bytes (e.g. `[0xD1, 0xFC]`) in `get_attribute()`/`set_mode()` replaced with named constants in `registers.rs`.
+- `RunMode` variants not implemented by SensorLib's reference `setMode()` (`LowPower`, `DeepSleep`, `Wakeup`, `UpdateFirmware`, `LpScan`) are now documented as unverified — they're mapped to a register by naming convention only, with no reference implementation to validate against.
+- README rewritten to match the current API (feature flags, `ChipInfo`, `TouchConfig`, reset pin), replacing stale references to methods and registers that no longer exist.
+- Extracted the protocol logic that was byte-for-byte duplicated between the blocking and async drivers (touch report decoding, run-mode-to-register mapping, attribute validation) into a shared internal `protocol` module, so a future fix only needs to happen once — the reset pin bug above is exactly the kind of drift this prevents.
+
+### Removed
+
+- **Breaking:** `Error::UnexpectedChipId`, a variant this driver never actually constructed (`get_attribute()`'s chip-type check returns `Error::InvalidChipType` instead).
+
+## [0.1.0] - 2026-07-18
+
+Initial release: async CST92xx driver (`embedded-hal-async`), followed by a blocking counterpart (`embedded-hal` + `DelayNs`), shared register/error/mode types, `defmt` support, and an ESP32-S3 Waveshare AMOLED sample project.
+
+[Unreleased]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.2.4...HEAD
+[0.2.4]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.2.3...0.2.4
+[0.2.3]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.2.2...0.2.3
+[0.2.2]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.2.1...0.2.2
+[0.2.1]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.2.0...0.2.1
+[0.2.0]: https://github.com/ScripTerasu/cst92xx-touch-driver/compare/0.1.0...0.2.0
+[0.1.0]: https://github.com/ScripTerasu/cst92xx-touch-driver/releases/tag/0.1.0

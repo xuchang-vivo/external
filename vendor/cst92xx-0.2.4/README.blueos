@@ -1,0 +1,10 @@
+Name: cst92xx
+URL: https://crates.io/crates/cst92xx
+Version: 0.2.4
+Revision: 1b05469c15ffb74976c5d75f3bdd62555361a58e
+License: MIT
+License File: //external/vendor/cst92xx-0.2.4/README.md
+Shipped: yes
+Security Critical: yes
+
+Description: Driver crate for CST92xx (CST9217 and CST9220) touch controllers with async and blocking embedded-hal support.
