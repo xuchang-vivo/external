@@ -631,3 +631,5 @@ license_files = ["LICENSE-MIT"]
 [crate.roxmltree]
 license_files = ["README.md"]
 
+[crate.cst92xx]
+license_files = ["README.md"]
