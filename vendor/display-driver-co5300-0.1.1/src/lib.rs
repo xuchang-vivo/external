@@ -102,6 +102,31 @@ where
         );
         reseter.reset().await?;
 
+        if Spec::WAVESHARE_216_INIT {
+            // Waveshare ESP32-C6-Touch-AMOLED-2.16 reference sequence.
+            let init_steps = [
+                InitStep::SingleCommand(SLEEP_OUT),
+                InitStep::DelayMs(600),
+                InitStep::CommandWithParams(CMD_PAGE_SWITCH, &[0x20]),
+                InitStep::CommandWithParams(0x19, &[0x10]),
+                InitStep::CommandWithParams(0x1C, &[0xA0]),
+                InitStep::CommandWithParams(CMD_PAGE_SWITCH, &[0x00]),
+                InitStep::CommandWithParams(SPI_MODE, &[0x80]),
+                InitStep::CommandWithParams(COLOR_MODE, &[0x55]),
+                InitStep::CommandWithParams(TEARING_EFFECT_ON, &[0x00]),
+                InitStep::CommandWithParams(MADCTL, &[0x30]),
+                InitStep::CommandWithParams(WRITE_CTRL_DISPLAY, &[0x20]),
+                InitStep::CommandWithParams(WBRIGHT, &[0xFF]),
+                InitStep::CommandWithParams(WRHBMDISBV, &[0xFF]),
+                InitStep::CommandWithParams(CASET, &[0x00, 0x00, 0x01, 0xDF]),
+                InitStep::CommandWithParams(RASET, &[0x00, 0x00, 0x01, 0xDF]),
+                InitStep::SingleCommand(DISPLAY_ON),
+                InitStep::DelayMs(100),
+            ];
+
+            return sequenced_init(init_steps.into_iter(), &mut delay, bus).await;
+        }
+
         let init_page_param = [Spec::INIT_PAGE_PARAM];
         let init_steps = [
             // Unlock Sequence

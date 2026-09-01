@@ -13,6 +13,9 @@ pub trait Co5300Spec: PanelSpec {
     /// Whether to force `read_id` to succeed regardless of hardware response.
     /// Corresponds to the logic in `LCD_ReadID`.
     const IGNORE_ID_CHECK: bool;
+
+    /// Use the cold-start sequence required by the Waveshare 2.16-inch panel.
+    const WAVESHARE_216_INIT: bool = false;
 }
 
 /// AM196Q410502LK_196_410x502
@@ -91,6 +94,7 @@ impl PanelSpec for Amoled_216Inch_480x480 {
 impl Co5300Spec for Amoled_216Inch_480x480 {
     const INIT_PAGE_PARAM: u8 = 0x00;
     const IGNORE_ID_CHECK: bool = true;
+    const WAVESHARE_216_INIT: bool = true;
 }
 
 // Amoled, 1.85Inch 390x450
